@@ -1,0 +1,13 @@
+.build
+.DS_Store
+.swiftpm
+*.pfx
+*.ipa
+*.app.dSYM.zip
+Package.resolved
+Packages
+Sources/*/Pods
+Sources/*/Podfile.lock
+Sources/*/fastlane/report.xml
+xcuserdata
+xcuserdatad
