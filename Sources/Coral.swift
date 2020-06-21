@@ -483,6 +483,13 @@ enum List: Hashable {
     case patternBinding
 }
 
+enum Literal: Hashable {
+    
+    case string(String)
+    case float(Double)
+    case integer(Int)
+}
+
 // MARK: - Node
 
 struct Node: Hashable {
@@ -942,5 +949,6 @@ enum TokenType: Hashable {
     case identifier(String)
     case illegal(String)
     case keyword(Keyword)
+    case literal(Literal)
     case punctuation(Punctuation)
 }
