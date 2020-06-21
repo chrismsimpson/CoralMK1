@@ -21,7 +21,7 @@ Hmm, there is no *real* plan, only that I've wanted to hack a language for the l
 
 ## The Language
 
-Checkout SPEC.md for specifics, but basically:
+Checkout [SPEC.md](SPEC.md) for specifics, but basically:
 - No OOP. Basically Go or Rust, but with a Swift-like syntax. In fact, you could call this a loose subset of Swift. When Apple announced Swift, they dubbed it "Objective-C without the C". Coral is "Swift without the Objective".
 - No C interop initially. I say initially, because if I can ever get this thing working, it's probably a good feature to have. Why not initially? Because I think it's more important to have an X-safe (type safe, memory safe, thread safe etc.) implementation of a standard library written in the language itself rather than relying on C. This is the reason why Swift support on Linux/Windows is still patchy. Many of the primitives used in a typical Swift program come from Foundation, which is not part of the core language spec.
 - Closures, async/away (but with a more English/human readable syntax), mutability/immutability as an language/allocation construct (as opposed to being provided by say, immutable types)
