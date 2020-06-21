@@ -17,6 +17,7 @@ Hmm, there is no *real* plan, only that I've wanted to hack a language for the l
 - Code generation for:
     - MLIR (and hopefully therefore LLVM IR for free)
     - WASM
+- Build an OS
 
 ## The Language
 
