@@ -7,7 +7,7 @@ My contribution to the shit show that is reality a la 2020. Earth needs a new pr
 - Free, but not just free, Lisp like in that it has no intrinsic dependancy on a proprietary runtime (or architecture), or even C for that matter
 - Energy efficient - I'm sick of all you Node.js script kiddies burning the Amazon
 
-An initial working title I had for this project was Meta (i.e. the *meta* language that everything will eventually be built in - the name Monkey was already taken). That seemed a massively insurmountable task, so I recalibrated to something smaller and arrived at Diesel (a play on DSL). Then I saw a three year old in the park with a shirt that read "Coral not Coal", and something from nature seemed symbolically important. This just happens to the name of my current *File > New > Project* in which I got AST parsing (starting) to work. Let's see how long the name sticks.
+An initial working title I had for this project was Meta (i.e. the *meta* language that everything will eventually be built in - the name Monkey was already taken). That seemed a massively insurmountable task, so I recalibrated to something smaller and arrived at Diesel (a play on DSL). Then I saw a three year old in the park with a shirt that read "Coral not Coal", and something from nature seemed symbolically important. This just happens to be the name of my current *File > New > Project* in which I got AST parsing (starting) to work. Let's see how long the name sticks.
 
 ## The Plan
 
