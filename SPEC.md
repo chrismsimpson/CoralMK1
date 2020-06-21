@@ -26,7 +26,7 @@ using type MyLibrary.MyType as MyTypeAlias
 ```
 
 ```
-using func MyLibrary.myFunc as myFuncAlais
+using func MyLibrary.myFunc as myFuncAlias
 ```
 
 ```

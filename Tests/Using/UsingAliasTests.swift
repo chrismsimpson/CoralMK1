@@ -1,16 +1,16 @@
 //
-//  UsingTypeTests.swift
+//  File.swift
 //
 
 import XCTest
 @testable import Coral
 
-final class UsingTypeTests: XCTestCase {
+final class UsingAliasTests: XCTestCase {
     
     var source: String {
         
         return """
-using type MyLibrary.MyType
+using MyLibrary as MyAlias
 """
     }
     
@@ -116,7 +116,7 @@ using type MyLibrary.MyType
         
         let usingDeclaration = self.setupUsingDeclaration()
         
-        assert(usingDeclaration.children.count == 3)
+        assert(usingDeclaration.children.count == 4)
     }
     
     func testUsingDeclarationUsingToken() {
@@ -133,83 +133,45 @@ using type MyLibrary.MyType
         assert(token.tokenType == .keyword(.coral(.using)))
     }
     
-    func testUsingDeclarationTypetoken() {
-        
-        let usingDeclaration = self.setupUsingDeclaration()
-        
-        let typeToken = usingDeclaration.children[1]
-        
-        guard case let .token(token) = typeToken.nodeType else {
-            
-            fatalError()
-        }
-        
-        assert(token.tokenType == .keyword(.coral(.type)))
-    }
-    
     func testUsingDeclarationPath() {
         
         let usingDeclaration = self.setupUsingDeclaration()
         
-        let path = usingDeclaration.children[2]
+        let path = usingDeclaration.children[1]
         
         assert(path.nodeType == .path)
     }
     
-    func testUsingDeclarationPathChildren() {
+    func testUsingDeclarationAsToken() {
         
         let usingDeclaration = self.setupUsingDeclaration()
         
-        let path = usingDeclaration.children[2]
+        let asToken = usingDeclaration.children[2]
         
-        assert(path.children.count == 3)
-    }
-    
-    func testUsingDeclarationPathComponent0() {
-        
-        let usingDeclaration = self.setupUsingDeclaration()
-        
-        let path = usingDeclaration.children[2]
-        
-        let component0 = path.children[0]
-        
-        guard case let .pathComponent(component) = component0.nodeType else {
+        guard case let .token(token) = asToken.nodeType else {
             
             fatalError()
         }
         
-        assert(component == "MyLibrary")
+        assert(token.tokenType == .keyword(.coral(.as)))
     }
     
-    func testUsingDeclarationPathComponent1() {
+    func testUsingDeclarationAliasToken() {
         
         let usingDeclaration = self.setupUsingDeclaration()
         
-        let path = usingDeclaration.children[2]
+        let aliasToken = usingDeclaration.children[3]
         
-        let component1 = path.children[1]
-        
-        guard case let .token(token) = component1.nodeType else {
+        guard case let .token(token) = aliasToken.nodeType else {
             
             fatalError()
         }
         
-        assert(token.tokenType == .punctuation(.period))
-    }
-    
-    func testUsingDeclarationPathComponent2() {
-        
-        let usingDeclaration = self.setupUsingDeclaration()
-        
-        let path = usingDeclaration.children[2]
-        
-        let component2 = path.children[2]
-        
-        guard case let .pathComponent(component) = component2.nodeType else {
+        guard case let .identifier(identifier) = token.tokenType else {
             
             fatalError()
         }
         
-        assert(component == "MyType")
+        assert(identifier == "MyAlias")
     }
 }

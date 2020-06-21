@@ -38,6 +38,11 @@ enum Clause: Hashable {
 
 extension Character {
     
+    public var isURLPart: Bool {
+        
+        return self.isLetter || self.isNumber || self == ":" || self == "/" || self == "." || self == "#" || self == "~" || self == "?" || self == "=" || self == "+" || self == "[" || self == "]"
+    }
+    
     public var isIdentifierPart: Bool {
         
         return self.isLetter || self.isNumber || self == "_"
@@ -172,8 +177,9 @@ extension Keyword {
     
     enum Coral: String, Hashable {
         
+        case `as`
         case `fileprivate`
-        case final
+        case from
         case `internal`
         case `let`
         case open
@@ -329,9 +335,13 @@ extension Lexer {
         case _ where self.nextCharacter.isQuotation:
             fatalError()
             
+        case _ where self.next(equals: "http://"):
+            fallthrough
+        case _ where self.next(equals: "https://"):
+            return self.lexURLIdentifier()
+            
         case _ where self.nextCharacter.isIdentifierStart:
             return self.lexIdentifier()
-            
             
         default:
             return self.lexIllegal()
@@ -348,6 +358,25 @@ extension Lexer {
         self.consumeSpaces()
         
         let idOrKeyword = self.consume { $0.isIdentifierPart }
+        
+        if let keyword = Keyword(idOrKeyword) {
+            
+            return Token(tokenType: .keyword(keyword))
+        }
+        
+        return Token(tokenType: .identifier(idOrKeyword))
+    }
+}
+
+// MARK: - Lexer - Lexing - Identifier - URL
+
+extension Lexer {
+    
+    mutating func lexURLIdentifier() -> Token {
+        
+        self.consumeSpaces()
+        
+        let idOrKeyword = self.consume { $0.isURLPart }
         
         if let keyword = Keyword(idOrKeyword) {
             
@@ -452,7 +481,10 @@ extension Lexer {
             return false
         }
         
-        let end = self.input.index(start, offsetBy: str.count)
+        guard let end = self.input.index(start, offsetBy: str.count, limitedBy: self.input.endIndex) else {
+            
+            return false
+        }
     
         guard end < self.input.endIndex else {
             
@@ -663,7 +695,6 @@ extension Parser {
             return self.parseVariableDeclaration(token, start, modifiers)
             
         case .fileprivate,
-             .final,
              .internal,
              .open,
              .private,
@@ -695,7 +726,8 @@ extension Parser {
             
             let typeStart = self.lexer.position
             
-            guard let type = self.lexer.lexToken(), case .keyword(.coral(.type)) = type.tokenType else {
+            guard let type = self.lexer.lexToken(),
+                case .keyword(.coral(.type)) = type.tokenType else {
                 
                 fatalError()
             }
@@ -706,13 +738,110 @@ extension Parser {
                     nodeType: .token(type),
                     start: typeStart,
                     end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
         }
-        
+        else if self.lexer.next(equals: "func") {
+            
+            let funcStart = self.lexer.position
+            
+            guard let funcToken = self.lexer.lexToken(),
+                case .keyword(.coral(.type)) = funcToken.tokenType else {
+                
+                fatalError()
+            }
+            
+            children.append(
+                Node(
+                    children: [],
+                    nodeType: .token(funcToken),
+                    start: funcStart,
+                    end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
+        }
+    
+        children.append(self.parsePath())
+    
         self.lexer.consumeSpaces()
         
-        let path = self.parsePath()
+        if self.lexer.next(equals: "from") {
+            
+            let fromStart = self.lexer.position
+            
+            guard let from = self.lexer.lexToken(),
+                case .keyword(.coral(.from)) = from.tokenType else {
+            
+                fatalError()
+            }
+            
+            children.append(
+                Node(
+                    children: [],
+                    nodeType: .token(from),
+                    start: fromStart,
+                    end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
+            
+            //
+            
+            let remoteStart = self.lexer.position
+            
+            guard let url = self.lexer.lexToken(),
+                case .identifier = url.tokenType else {
+                
+                fatalError()
+            }
+            
+            children.append(
+                Node(
+                    children: [],
+                    nodeType: .token(url),
+                    start: remoteStart,
+                    end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
+        }
         
-        children.append(path)
+        if self.lexer.next(equals: "as") {
+            
+            let asStart = self.lexer.position
+            
+            guard let asToken = self.lexer.lexToken(),
+                case .keyword(.coral(.as)) = asToken.tokenType else {
+                    
+                fatalError()
+            }
+            
+            children.append(
+                Node(
+                    children: [],
+                    nodeType: .token(asToken),
+                    start: asStart,
+                    end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
+            
+            //
+            
+            let aliasStart = self.lexer.position
+            
+            guard let alias = self.lexer.lexToken(),
+                case .identifier = alias.tokenType else {
+                    
+                fatalError()
+            }
+            
+            children.append(
+                Node(
+                    children: [],
+                    nodeType: .token(alias),
+                    start: aliasStart,
+                    end: self.lexer.position))
+            
+            self.lexer.consumeSpaces()
+        }
         
         return Node(
             children: children,
