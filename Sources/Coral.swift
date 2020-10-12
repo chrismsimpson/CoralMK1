@@ -38,32 +38,32 @@ enum Clause: Hashable {
 
 extension Character {
     
-    public var isURLPart: Bool {
+    var isURLPart: Bool {
         
         return self.isLetter || self.isNumber || self == ":" || self == "/" || self == "." || self == "#" || self == "~" || self == "?" || self == "=" || self == "+" || self == "[" || self == "]"
     }
     
-    public var isIdentifierPart: Bool {
+    var isIdentifierPart: Bool {
         
         return self.isLetter || self.isNumber || self == "_"
     }
     
-    public var isIdentifierStart: Bool {
+    var isIdentifierStart: Bool {
         
         return self.isLetter || self == "_"
     }
     
-    public var isNumberPart: Bool {
+    var isNumberPart: Bool {
         
         return self.isNumber || self == "-" || self == "." || self == "e"
     }
     
-    public var isNumberStart: Bool {
+    var isNumberStart: Bool {
         
         return self.isNumber || self == "-" || self == "."
     }
     
-    public var isQuotation: Bool {
+    var isQuotation: Bool {
         
         guard let asciiValue = self.asciiValue else {
             
@@ -178,6 +178,7 @@ extension Keyword {
     enum Coral: String, Hashable {
         
         case `as`
+        case `enum`
         case `fileprivate`
         case from
         case `internal`
@@ -185,6 +186,7 @@ extension Keyword {
         case open
         case `public`
         case `private`
+        case `struct`
         case type
         case `using`
         case `var`
@@ -300,7 +302,7 @@ extension Lexer {
 
 extension Lexer {
     
-    public mutating func lexToken() -> Token? {
+    mutating func lexToken() -> Token? {
         
         self.consumeSpaces()
         
@@ -593,17 +595,66 @@ extension Parser {
 
 extension Parser {
     
-    mutating func parseSourceFile() -> Node {
+    mutating func parseCodeBlockItem() -> (Node, endReached: Bool) {
         
         let start = self.lexer.position
+
+        var endReached: Bool = false
         
-        let list = self.parseCodeBlockList()
+        var children = Array<Node>()
         
-        return Node(
-            children: [list],
-            nodeType: .sourceFile,
+        while !self.lexer.isEof {
+            
+            let position = self.lexer.position
+            
+            guard let token = self.lexer.lexToken() else {
+
+                endReached = true
+                
+                break
+            }
+            
+            if case .punctuation(.rightBrace) = token.tokenType {
+                
+                endReached = true
+                
+                break
+            }
+            
+            if case .comment = token.tokenType {
+                
+                continue
+            }
+            
+            children.append(self.parseToken(token, position, []))
+        }
+        
+        let node = Node(
+            children: children,
+            nodeType: .item(.codeBlock),
             start: start,
             end: self.lexer.position)
+        
+        return (node, endReached)
+    }
+    
+    mutating func parseCodeBlockItems() -> Array<Node> {
+        
+        var items = Array<Node>()
+        
+        while !self.lexer.isEof {
+            
+            let (item, endReached) = self.parseCodeBlockItem()
+            
+            items.append(item)
+            
+            if endReached {
+                
+                break
+            }
+        }
+        
+        return items
     }
     
     mutating func parseCodeBlockList() -> Node {
@@ -619,90 +670,194 @@ extension Parser {
             end: self.lexer.position)
     }
     
-    mutating func parseCodeBlockItems() -> Array<Node> {
-        
-        var items = Array<Node>()
-        
-        while !self.lexer.isEof {
-            
-            guard let item = self.parseCodeBlockItem() else {
-                
-                break
-            }
-            
-            items.append(item)
-        }
-        
-        return items
-    }
-    
-    mutating func parseCodeBlockItem() -> Node? {
-        
-        let start = self.lexer.position
-
-        var children = Array<Node>()
-        
-        while !self.lexer.isEof {
-            
-            let position = self.lexer.position
-            
-            guard let token = self.lexer.lexToken() else {
-
-                break
-            }
-            
-            if case .punctuation(.rightBrace) = token.tokenType {
-                
-                break
-            }
-            
-            if case .comment = token.tokenType {
-                
-                continue
-            }
-            
-            children.append(self.parseToken(token, position, []))
-        }
+    mutating func parseDeclarationModifier(_ token: Token, _ start: String.Index) -> Node {
         
         return Node(
-            children: children,
-            nodeType: .item(.codeBlock),
+            children: [
+                Node(
+                    children: [],
+                    nodeType: .token(token),
+                    start: start,
+                    end: self.lexer.position)
+            ],
+            nodeType: .declarationModifier,
             start: start,
             end: self.lexer.position)
     }
     
-    mutating func parseToken(_ token: Token, _ start: String.Index, _ modifiers: Array<Node>) -> Node {
+    mutating func parseEnumDeclaration(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
+        
+        fatalError()
+    }
+    
+    mutating func parseIdentifierPattern() -> Node {
+        
+        let start = self.lexer.position
+        
+        let identifier = self.lexer.lexIdentifier()
+        
+        return Node(
+            children: [
+                Node(
+                    children: [],
+                    nodeType: .token(identifier),
+                    start: start,
+                    end: self.lexer.position)
+            ],
+            nodeType: .identifierPattern,
+            start: start,
+            end: self.lexer.position)
+    }
+    
+    mutating func parseInitializerClause() -> Node {
+        
+        fatalError()
+    }
+    
+    mutating func parsePath() -> Node {
+        
+        let start = self.lexer.position
+        
+        var components = Array<Node>()
+        
+        while !self.lexer.isEof {
+            
+            if self.lexer.next(equals: "\n") {
+                
+                break
+            }
+            
+            if self.lexer.next(equals: " ") {
+                
+                break
+            }
+            
+            let position = self.lexer.position
+            
+            guard let token = self.lexer.lexToken() else {
+                
+                fatalError()
+            }
+            
+            switch token.tokenType {
+                
+            case let .identifier(identifier):
+                
+                components.append(
+                    Node(
+                        children: [],
+                        nodeType: .pathComponent(identifier),
+                        start: position,
+                        end: self.lexer.position))
+                
+            case .punctuation(.period):
+                
+                components.append(
+                    Node(
+                        children: [],
+                        nodeType: .token(token),
+                        start: position,
+                        end: self.lexer.position))
+                
+            default:
+                fatalError()
+            }
+        }
+        
+        return Node(
+            children: components,
+            nodeType: .path,
+            start: start,
+            end: self.lexer.position)
+    }
+    
+    mutating func parsePatternBinding() -> Node {
+        
+        let start = self.lexer.position
+        
+        let identifierPattern = self.parseIdentifierPattern()
+        
+        let initializerClause = self.parseInitializerClause()
+        
+        return Node(
+            children: [
+                identifierPattern,
+                initializerClause
+            ],
+            nodeType: .patternBinding,
+            start: start,
+            end: self.lexer.position)
+    }
+    
+    mutating func parsePatternBindingList() -> Node {
+        
+        let start = self.lexer.position
+        
+        let patternBinding = self.parsePatternBinding()
+        
+        return Node(
+            children: [patternBinding],
+            nodeType: .list(.patternBinding),
+            start: start,
+            end: self.lexer.position)
+    }
+    
+    mutating func parseSourceFile() -> Node {
+        
+        let start = self.lexer.position
+        
+        let list = self.parseCodeBlockList()
+        
+        return Node(
+            children: [list],
+            nodeType: .sourceFile,
+            start: start,
+            end: self.lexer.position)
+    }
+    
+    mutating func parseStructDeclaration(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
+     
+        fatalError()
+    }
+    
+    mutating func parseToken(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
         
         switch token.tokenType {
             
         case let .keyword(.coral(keyword)):
-            return self.parseToken(token, start, keyword, modifiers)
+            return self.parseToken(token, start, keyword, trivia)
             
         case let .keyword(.ir(keyword)):
-            return self.parseToken(token, start, keyword, modifiers)
+            return self.parseToken(token, start, keyword, trivia)
             
         default:
             return self.parseIllegal(token, start)
         }
     }
     
-    mutating func parseToken(_ token: Token, _ start: String.Index, _ keyword: Keyword.Coral, _ modifiers: Array<Node>) -> Node {
+    mutating func parseToken(_ token: Token, _ start: String.Index, _ keyword: Keyword.Coral, _ trivia: Array<Node>) -> Node {
         
         switch keyword {
             
         case .let,
              .var:
-            return self.parseVariableDeclaration(token, start, modifiers)
+            return self.parseVariableDeclaration(token, start, trivia)
             
         case .fileprivate,
              .internal,
              .open,
              .private,
              .public:
-            return self.parseToken(token, start, modifiers + [self.parseDeclarationModifier(token, start)])
+            return self.parseToken(token, start, trivia + [self.parseDeclarationModifier(token, start)])
             
         case .using:
             return self.parseUsingDeclaration(token, start)
+            
+        case .struct:
+            return self.parseStructDeclaration(token, start, trivia)
+            
+        case .enum:
+            return self.parseEnumDeclaration(token, start, trivia)
             
         default:
             return self.parseIllegal(token, start)
@@ -850,94 +1005,21 @@ extension Parser {
             end: self.lexer.position)
     }
     
-    mutating func parsePath() -> Node {
-        
-        let start = self.lexer.position
-        
-        var components = Array<Node>()
-        
-        while !self.lexer.isEof {
-            
-            if self.lexer.next(equals: "\n") {
-                
-                break
-            }
-            
-            if self.lexer.next(equals: " ") {
-                
-                break
-            }
-            
-            let position = self.lexer.position
-            
-            guard let token = self.lexer.lexToken() else {
-                
-                fatalError()
-            }
-            
-            switch token.tokenType {
-                
-            case let .identifier(identifier):
-                
-                components.append(
-                    Node(
-                        children: [],
-                        nodeType: .pathComponent(identifier),
-                        start: position,
-                        end: self.lexer.position))
-                
-            case .punctuation(.period):
-                
-                components.append(
-                    Node(
-                        children: [],
-                        nodeType: .token(token),
-                        start: position,
-                        end: self.lexer.position))
-                
-            default:
-                fatalError()
-            }
-        }
-        
-        return Node(
-            children: components,
-            nodeType: .path,
-            start: start,
-            end: self.lexer.position)
-    }
-    
-    mutating func parseDeclarationModifier(_ token: Token, _ start: String.Index) -> Node {
-        
-        return Node(
-            children: [
-                Node(children: [], nodeType: .token(token), start: start, end: self.lexer.position)
-            ],
-            nodeType: .declarationModifier,
-            start: start,
-            end: self.lexer.position)
-    }
-    
-    mutating func parseToken(_ token: Token, _ start: String.Index, _ keyword: Keyword.IR, _ modifiers: Array<Node>) -> Node {
-        
-        fatalError()
-    }
-    
-    mutating func parseVariableDeclaration(_ token: Token, _ _start: String.Index, _ modifiers: Array<Node>) -> Node {
+    mutating func parseVariableDeclaration(_ token: Token, _ _start: String.Index, _ trivia: Array<Node>) -> Node {
         
         var start = _start
         
         var children = Array<Node>()
         
-        if !modifiers.isEmpty {
+        if !trivia.isEmpty {
             
-            start = modifiers.map { $0.start }.min() ?? start
+            start = trivia.map { $0.start }.min() ?? start
             
-            let end = modifiers.map { $0.end }.max() ?? start
+            let end = trivia.map { $0.end }.max() ?? start
             
             children.append(
                 Node(
-                    children: modifiers,
+                    children: trivia,
                     nodeType: .list(.modifier),
                     start: start,
                     end: end))
@@ -960,61 +1042,6 @@ extension Parser {
             start: start,
             end: self.lexer.position)
     }
-    
-    mutating func parsePatternBindingList() -> Node {
-        
-        let start = self.lexer.position
-        
-        let patternBinding = self.parsePatternBinding()
-        
-        return Node(
-            children: [patternBinding],
-            nodeType: .list(.patternBinding),
-            start: start,
-            end: self.lexer.position)
-    }
-    
-    mutating func parsePatternBinding() -> Node {
-        
-        let start = self.lexer.position
-        
-        let identifierPattern = self.parseIdentifierPattern()
-        
-        let initializerClause = self.parseInitializerClause()
-        
-        return Node(
-            children: [
-                identifierPattern,
-                initializerClause
-            ],
-            nodeType: .patternBinding,
-            start: start,
-            end: self.lexer.position)
-    }
-    
-    mutating func parseIdentifierPattern() -> Node {
-        
-        let start = self.lexer.position
-        
-        let identifier = self.lexer.lexIdentifier()
-        
-        return Node(
-            children: [
-                Node(
-                    children: [],
-                    nodeType: .token(identifier),
-                    start: start,
-                    end: self.lexer.position)
-            ],
-            nodeType: .identifierPattern,
-            start: start,
-            end: self.lexer.position)
-    }
-    
-    mutating func parseInitializerClause() -> Node {
-        
-        fatalError()
-    }
 }
 
 // MARK: - Parser - Illegal
@@ -1027,6 +1054,41 @@ extension Parser {
     }
 }
 
+// MARK: - Parser - IR
+
+extension Parser {
+
+    mutating func parseFunction(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
+        
+        fatalError()
+    }
+    
+    mutating func parseOperator(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
+        
+        fatalError()
+    }
+    
+    mutating func parseTask(_ token: Token, _ start: String.Index, _ trivia: Array<Node>) -> Node {
+        
+        fatalError()
+    }
+    
+    mutating func parseToken(_ token: Token, _ start: String.Index, _ keyword: Keyword.IR, _ trivia: Array<Node>) -> Node {
+        
+        switch keyword {
+            
+        case .func:
+            return self.parseFunction(token, start, trivia)
+            
+        case .operator:
+            return self.parseOperator(token, start, trivia)
+            
+        case .task:
+            return self.parseTask(token, start, trivia)
+        }
+    }
+}
+
 // MARK: - Pattern
 
 enum Pattern: Hashable {
@@ -1036,7 +1098,7 @@ enum Pattern: Hashable {
 
 // MARK: - Punctuation
 
-public enum Punctuation: Hashable {
+enum Punctuation: Hashable {
 
     case leftBrace
     case rightBrace
@@ -1067,7 +1129,7 @@ enum Statement: Hashable {
 
 struct Token: Hashable {
     
-    public let tokenType: TokenType
+    let tokenType: TokenType
 }
 
 // MARK: - TokenType
