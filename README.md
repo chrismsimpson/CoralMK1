@@ -1,3 +1,5 @@
+DISCLAIMER: This has now evolved to this: [Neu](https://github.com/chrismsimpson/Neu).
+
 # Coral
 
 My contribution to the shit show that is reality a la 2020. Earth needs a new programming language, something to finally replace C, that is:
